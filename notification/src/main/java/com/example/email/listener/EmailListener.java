@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EmailListener {
 
-    @Autowired
     private NotificationService notificationService;
 
     @RabbitListener(queues = "travel.email")
@@ -25,5 +24,10 @@ public class EmailListener {
             notificationService.sendNotification(notificationDto);
         }
 
+    }
+
+    @Autowired
+    public EmailListener(NotificationService notificationService) {
+        this.notificationService = notificationService;
     }
 }

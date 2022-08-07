@@ -5,9 +5,16 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
+import javax.persistence.*;
+
 @AllArgsConstructor
 @NoArgsConstructor
+@Data
+@Entity
+@Table(name = "sms")
 public class Sms extends NotificationService {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
     private String toPhoneNumber;
 }

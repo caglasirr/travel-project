@@ -129,16 +129,17 @@ class OrderServiceTest {
         Mockito.when(userRepository.findById(Mockito.anyInt())).thenReturn(Optional.of(user));
         Mockito.when(tripRepository.findById(Mockito.anyInt())).thenReturn(Optional.of(trip));
         Mockito.when(ticketRepository.findByUserAndTrip(user,trip)).thenReturn(Optional.of(ticketList));
+        Mockito.when(ticketRepository.findByTrip(trip)).thenReturn(Optional.of(ticketList));
 
         //when
         TravelException e = assertThrows(TravelException.class,
                 ()->orderService.createOrder(userId,request));
 
         //then
-        assertEquals("Bireysel kullanıcı aynı sefer için en fazla 5 bilet alabilir.",e.getMessage());
+        assertEquals("Bireysel kullanıcı aynı sefer için en fazla 5 bilet alabilir. Kalan bilet hakkınız: 0",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
     }
@@ -162,10 +163,10 @@ class OrderServiceTest {
                 ()->orderService.createOrder(userId,request));
 
         //then
-        assertEquals("Kurumsal kullanıcı aynı sefer için en fazla 20 bilet alabilir.",e.getMessage());
+        assertEquals("Kurumsal kullanıcı aynı sefer için en fazla 20 bilet alabilir. Kalan bilet hakkınız: 0",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
     }
@@ -195,7 +196,7 @@ class OrderServiceTest {
         assertEquals("You can not buy this ticket since capacity is full!",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
         verify(ticketRepository).findByTrip(trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
@@ -257,7 +258,7 @@ class OrderServiceTest {
         assertEquals("Bireysel kullanıcı tek bir siparişte en fazla 2 erkek yolcu için bilet alabilir.",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
         verify(ticketRepository).findByTrip(trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
@@ -295,7 +296,7 @@ class OrderServiceTest {
         verify(tripRepository).findById(Mockito.anyInt());
         verify(ticketRepository).findByUserAndTrip(user,trip);
         verify(ticketRepository).findByTrip(trip);
-        verify(orderRepository).save(Mockito.any());
+        verify(orderRepository,times(request.getPassenger().size())).save(Mockito.any());
         verify(paymentClient).createPayment(Mockito.any());
         verify(orderConverter.convert(order));
     }
