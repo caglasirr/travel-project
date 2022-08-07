@@ -1,5 +1,18 @@
 # travel-project
 
+TravelApp kullanıcıların bilet satın alabileceği bir uygulamadır. Travel-Admin ise Admin'in sefer ekleyebileceği ve iptal edebileceği bir uygulamadır.
+Uygulamada PostgreSQL veritabanı ve RabbitMQ kullanılmıştır. 
+
+#### travel, notification, payment için üç farklı db vardır ve portları aşağıdaki gibidir:
+spring.datasource.url=jdbc:postgresql://localhost:5432/travel
+<br>spring.datasource.url=jdbc:postgresql://localhost:5432/notification
+<br>spring.datasource.url=jdbc:postgresql://localhost:5432/payment
+
+#### uygulamaların portları aşağıdaki gibidir:
+travel: localhost:8086
+<br>travel-admin: localhost:8088
+<br>rabbit-mq: localhost:15672
+
 <pre>
  {
         "link": "localhost:8088/admins/{adminId}/trip",
