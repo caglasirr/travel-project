@@ -160,7 +160,7 @@ public class OrderService {
 
     public NotificationDto prepareInfo(User user, Order order){
         NotificationDto notificationDto = new NotificationDto();
-        notificationDto.setToEmail(user.getPhoneNumber());
+        notificationDto.setToEmail(user.getEmail());
         notificationDto.setToPhoneNumber(user.getPhoneNumber());
         notificationDto.setSubject("TICKETS");
         notificationDto.setBody(orderConverter.convert(order).toString());
@@ -171,7 +171,7 @@ public class OrderService {
     @Autowired
     public OrderService(TicketRepository ticketRepository, UserRepository userRepository,
                         TripRepository tripRepository, OrderRepository orderRepository,
-                        PaymentClient paymentClient, OrderConverter orderConverter, RabbitTemplate rabbitTemplate) {
+                        PaymentClient paymentClient, OrderConverter orderConverter, AmqpTemplate rabbitTemplate) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.tripRepository = tripRepository;

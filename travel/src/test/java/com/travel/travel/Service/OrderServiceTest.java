@@ -2,6 +2,7 @@ package com.travel.travel.Service;
 
 import com.travel.travel.Client.PaymentClient;
 import com.travel.travel.Converter.OrderConverter;
+import com.travel.travel.Dto.NotificationDto;
 import com.travel.travel.Dto.OrderDto;
 import com.travel.travel.Dto.PaymentDto;
 import com.travel.travel.Dto.Request.TicketRequest;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigInteger;
@@ -47,6 +50,8 @@ class OrderServiceTest {
     private PaymentClient paymentClient;
     @Mock
     private OrderConverter orderConverter;
+    @Mock
+    private AmqpTemplate rabbitTemplate;
 
     @Test
     void itShouldThrowTravelException_whenUserNotFound(){
@@ -98,10 +103,13 @@ class OrderServiceTest {
         final int tripId = 7;
         User user = prepareRetailUser();
         Trip trip = prepareCancelledTrip();
+        List<Ticket> ticketList = mock(List.class);
         TicketRequest request = prepareTicketRequest();
 
         Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         Mockito.when(tripRepository.findById(tripId)).thenReturn(Optional.of(trip));
+        Mockito.when(ticketRepository.findByTrip(trip)).thenReturn(Optional.of(ticketList));
+        Mockito.when(ticketRepository.findByUserAndTrip(user,trip)).thenReturn(Optional.of(ticketList));
 
         //when
         TravelException e = assertThrows(TravelException.class,
@@ -111,7 +119,8 @@ class OrderServiceTest {
         assertEquals("You can not buy ticket for this trip since it is cancelled!",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verifyNoInteractions(ticketRepository);
+        verify(ticketRepository).findByTrip(trip);
+        verify(ticketRepository).findByUserAndTrip(user,trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
     }
@@ -139,7 +148,7 @@ class OrderServiceTest {
         assertEquals("Bireysel kullanıcı aynı sefer için en fazla 5 bilet alabilir. Kalan bilet hakkınız: 0",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(1)).findByUserAndTrip(user,trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
     }
@@ -156,6 +165,7 @@ class OrderServiceTest {
 
         Mockito.when(userRepository.findById(Mockito.anyInt())).thenReturn(Optional.of(user));
         Mockito.when(tripRepository.findById(Mockito.anyInt())).thenReturn(Optional.of(trip));
+        Mockito.when(ticketRepository.findByTrip(trip)).thenReturn(Optional.of(ticketList));
         Mockito.when(ticketRepository.findByUserAndTrip(user,trip)).thenReturn(Optional.of(ticketList));
 
         //when
@@ -166,7 +176,7 @@ class OrderServiceTest {
         assertEquals("Kurumsal kullanıcı aynı sefer için en fazla 20 bilet alabilir. Kalan bilet hakkınız: 0",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(1)).findByUserAndTrip(user,trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
     }
@@ -193,10 +203,10 @@ class OrderServiceTest {
                 ()->orderService.createOrder(userId,request));
 
         //then
-        assertEquals("You can not buy this ticket since capacity is full!",e.getMessage());
+        assertEquals("There is only 0 tickets available!",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(1)).findByUserAndTrip(user,trip);
         verify(ticketRepository).findByTrip(trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
@@ -224,7 +234,7 @@ class OrderServiceTest {
                 ()->orderService.createOrder(userId,request));
 
         //then
-        assertEquals("You can not buy this ticket since capacity is full!",e.getMessage());
+        assertEquals("There is only 0 tickets available!",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
         verify(ticketRepository).findByUserAndTrip(user,trip);
@@ -258,7 +268,7 @@ class OrderServiceTest {
         assertEquals("Bireysel kullanıcı tek bir siparişte en fazla 2 erkek yolcu için bilet alabilir.",e.getMessage());
         verify(userRepository).findById(Mockito.anyInt());
         verify(tripRepository).findById(Mockito.anyInt());
-        verify(ticketRepository, times(2)).findByUserAndTrip(user,trip);
+        verify(ticketRepository, times(1)).findByUserAndTrip(user,trip);
         verify(ticketRepository).findByTrip(trip);
         verifyNoInteractions(orderRepository);
         verifyNoInteractions(paymentClient);
@@ -278,7 +288,7 @@ class OrderServiceTest {
         PaymentDto payment = mock(PaymentDto.class);
         Order order = mock(Order.class);
         OrderDto orderDto = mock(OrderDto.class);
-
+        NotificationDto notificationDto = prepareNotificationDto();
 
         Mockito.when(userRepository.findById(Mockito.anyInt())).thenReturn(Optional.of(user));
         Mockito.when(tripRepository.findById(Mockito.anyInt())).thenReturn(Optional.of(trip));
@@ -286,7 +296,9 @@ class OrderServiceTest {
         Mockito.when(ticketRepository.findByUserAndTrip(user,trip)).thenReturn(Optional.of(ticketList_));
         Mockito.when(paymentClient.createPayment(payment)).thenReturn(payment);
         Mockito.when(orderRepository.save(order)).thenReturn(order);
-        Mockito.when(orderConverter.convert(order)).thenReturn(orderDto);
+        Mockito.when(orderConverter.convert(Mockito.any(Order.class))).thenReturn(orderDto);
+        Mockito.when(orderConverter.convert(order).toString()).thenReturn("orderDto");
+        doNothing().when(rabbitTemplate).convertAndSend(Mockito.anyString(),Mockito.anyString(),Mockito.any(NotificationDto.class));
 
         //when
         OrderDto response = orderService.createOrder(userId,request);
@@ -296,9 +308,11 @@ class OrderServiceTest {
         verify(tripRepository).findById(Mockito.anyInt());
         verify(ticketRepository).findByUserAndTrip(user,trip);
         verify(ticketRepository).findByTrip(trip);
-        verify(orderRepository,times(request.getPassenger().size())).save(Mockito.any());
+        verify(orderRepository,times(1)).save(Mockito.any());
+        verify(rabbitTemplate, times(1)).convertAndSend(Mockito.eq("travel.email"),
+                Mockito.eq("travel.email"), Mockito.any(NotificationDto.class));
         verify(paymentClient).createPayment(Mockito.any());
-        verify(orderConverter.convert(order));
+        verify(orderConverter).convert(order);
     }
 
     @Test
@@ -317,6 +331,7 @@ class OrderServiceTest {
         Mockito.when(tripRepository.findById(Mockito.anyInt())).thenReturn(Optional.of(trip));
         Mockito.when(ticketRepository.findByTrip(trip)).thenReturn(Optional.of(ticketList));
         Mockito.when(ticketRepository.findByUserAndTrip(user,trip)).thenReturn(Optional.of(ticketList_));
+        doNothing().when(rabbitTemplate).convertAndSend(Mockito.anyString(),Mockito.anyString(),Mockito.any(NotificationDto.class));
         Mockito.when(paymentClient.createPayment(Mockito.any())).thenThrow(new RuntimeException());
         //when
         TravelException e = assertThrows(TravelException.class,
@@ -391,6 +406,11 @@ class OrderServiceTest {
                 role(Role.USER).build();
     }
 
+    private NotificationDto prepareNotificationDto(){
+        return NotificationDto.builder().toEmail("dd").toPhoneNumber("444")
+                .subject("ww").body("s").build();
+    }
+
     private Trip prepareBusTrip(){
         return Trip.builder().fromCity("İstanbul").toCity("Ankara").vehicleType(VehicleType.BUS)
                 .tripStatus(TripStatus.ACTIVE).date("14.06.2022").build();
@@ -418,6 +438,20 @@ class OrderServiceTest {
         list.add(passenger1);
         list.add(passenger2);
         list.add(passenger3);
+        return list;
+    }
+
+    private OrderDto prepareOrderDto(){
+        return OrderDto.builder().orderNumber(1).paymentType(PaymentType.EFT)
+                .totalPaymentAmount(BigInteger.valueOf(90)).tickets(prepareTickets()).build();
+    }
+
+    private List<TicketDto> prepareTickets(){
+        List list = new ArrayList<>();
+        TicketDto ticket1 = TicketDto.builder().ticketNumber(1).build();
+        TicketDto ticket2 = TicketDto.builder().ticketNumber(1).build();
+        list.add(ticket1);
+        list.add(ticket2);
         return list;
     }
 
