@@ -50,6 +50,8 @@ public class OrderService {
     public OrderDto createOrder(int userId, TicketRequest ticketRequest) {
         User user = userRepository.findById(userId).orElseThrow(()->new TravelException("User not found!"));
         Trip trip = tripRepository.findById(ticketRequest.getTripId()).orElseThrow(()->new TravelException("Trip not found!"));
+
+        //User'ın bilet alıp alamayacağını belirlemek için gerekli kontroller ve gerekli hesaplamalar.
         int numberOfPassengers = ticketRequest.getPassenger().size();
         int ticketNumberForUserAndTrip = findTicketNumberByUserAndTrip(user,trip);
         int ticketNumberForTrip = findNumberOfTicketsByTrip(trip);
@@ -61,8 +63,7 @@ public class OrderService {
         List<Ticket> ticketList = new ArrayList<>();
         PaymentDto paymentDto = new PaymentDto();
         Order order = new Order();
-
-        //kontrols
+        
         if(trip.getTripStatus().equals(TripStatus.CANCELLED))
             throw new TravelException("You can not buy ticket for this trip since it is cancelled!");
 
