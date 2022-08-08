@@ -28,10 +28,9 @@ public class UserService {
 
     public UserDto register(UserRegisterRequest userRegisterRequest) {
 
-        //Sistemde böyle bir kullanıcının zaten olup olmadığının kontrolünü yapar:
         boolean isExists = userRepository.findByEmail(userRegisterRequest.getEmail()).isPresent();
         if(!isExists) {
-            //Request'ten alınan datanın yeni oluşturulan user'a set edilmesi:
+
             User user = userConvertor.convert(userRegisterRequest);
             NotificationDto notificationDto = prepareInfo(user);
             userRepository.save(user);
@@ -44,7 +43,6 @@ public class UserService {
         }
     }
 
-    //Kullanıcı sisteme login olur:
     public UserDto login(UserLoginRequest request){
         request.setPassword(encryptor.encryptGivenPassword(request.getPassword()));
 
