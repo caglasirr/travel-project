@@ -15,6 +15,7 @@ public class TicketService {
 
     private TicketRepository ticketRepository;
 
+    //Satılan toplam bilet adeti ve kazanılan toplam para bilgisini döner.
     public TicketResponse findAmountAndNumberOfTickets(){
         TicketResponse response = new TicketResponse();
         int totalAmount = 0;

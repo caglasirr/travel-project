@@ -63,7 +63,7 @@ public class OrderService {
         List<Ticket> ticketList = new ArrayList<>();
         PaymentDto paymentDto = new PaymentDto();
         Order order = new Order();
-        
+
         if(trip.getTripStatus().equals(TripStatus.CANCELLED))
             throw new TravelException("You can not buy ticket for this trip since it is cancelled!");
 
@@ -113,6 +113,7 @@ public class OrderService {
         }
     }
 
+    //User'ın siparişlerini ve bu siparişlerindeki bütün biletleri getirir.
     public List<OrderDto> findTickets(int userId){
         User user = userRepository.findById(userId).orElseThrow(()->new TravelException("User not found!"));
         List<Order> orders = orderRepository.findByUser(user);
@@ -124,6 +125,7 @@ public class OrderService {
                 equals(Sex.MAN)).collect(Collectors.toList()).size();
     }
 
+    //Bir siparişte ödenmesi gerken ücreti hesaplar.
     public int findOrderAmount(TicketRequest request){
         int numberOfPassengers = request.getPassenger().size();
         return ONE_TICKET_AMOUNT*numberOfPassengers;
@@ -137,6 +139,7 @@ public class OrderService {
         return ticketRepository.findByUserAndTrip(user,trip).get().size();
     }
 
+    //Yolcunun bireysel ve kurumsal oluşuna göre kaç bilet alabileceği bilgisini döner.
     public int findRemainTicketNumber(User user, int ticketNumberByUserAndTrip){
         int result;
         if(user.getUserType().equals(UserType.RETAIL)){
@@ -148,6 +151,7 @@ public class OrderService {
         else return result;
     }
 
+    //Yolcunun uçak ve otobüs kapasitesine göre kaç bilet alabileceği bilgisini döner.
     public int findAvailableTicketNumber(Trip trip, int number){
         int result;
         if(trip.getVehicleType().equals(VehicleType.BUS)){
